@@ -1,0 +1,56 @@
+{% extends "homepage-base.html" %}
+{% load myfilters %}
+
+<div class="col-md-13 middle">
+    <h2><b>{% block title %}{% endblock %}</b></h2>
+    {% block main %}
+<p>
+<p align="justify" line-height=21px>
+This page shows the high level results from a single run of the HMP2 workflow.  Each run is comprised of a set 
+of data that has been uploaded to the HMP2 servers.  Once there, it is filtered for quality and error checked
+for completeness.  After the QC phase, the data is run on a specific Anadama pipeline.  After the pipeline
+completes, the output files can be accumulated into several highlevel charts shown below.  For contact information
+regarding the results and the workflow process, please search <a href=https://ibdmdb.org/enrollment> here.</a>
+</p>
+<div align=center>
+<H5> <B>Run Status: </B></H5>
+<table border="1" summary="{{ run }} on the HMP2 Anadama pipeline" cellspacing=5 cellpadding=5>
+<TR><TH>run<TH>study<TH>type<TH>week<TH>deposition date<TH>completion date
+<TR><TH>{{run}}<TH>{{study}}<TH>{{type}}<TH>{{week}}<TH>{{sdate}}<TH>{{fdate}}
+</table>
+<P>
+</div>
+<div align=center>
+  {% if pcoa %}
+         <img src="./otu_table_merged_meta.biom.pcl_pcoa_plot-BarcodeSequence.png">
+         <img src="./otu_table_merged_meta.biom.pcl_pcoa_plot-LinkerPrimerSequence.png">
+         <!-- <img src="./otu_table_merged.biom.pcl_pcoa_plot-DOB.png"> -->
+         <!-- <img src="./otu_table_merged.biom.pcl_pcoa_plot-Treatment.png"> -->
+         <img src="./otu_table_merged_meta.biom.pcl_pcoa_plot-Description.png">
+         <!-- <img src="./otu_table_merged.biom.pcl_pcoa_plot-sample.png"> -->
+  {% elif barchart %}
+         <a href="./otu_table_merged.biom_barcharts/taxa_summary_plots/bar_charts.html">bar_charts</a> <br>
+  {% elif heatmap %}
+         <img src="./merged_heatmap.png" alt="wgs heatmap image" height="900" width="600"> <br>
+  {% endif %}
+
+<H5> <B>Run Products: </B></H5>
+<table border="1" cellspacing=0 cellpadding=2>
+<TR><TH>output file
+{% for i in productfilerange %}
+<TR><TH><a href={{productpath}}/{{productfiles|lookup:i}}> {{productfiles|lookup:i}} </a>
+{% ifequal i 3 %}
+{% endifequal %}
+{% endfor %}
+</table>
+
+<H5> <B> Raw Data: </B></H5>
+<table border="1"  cellspacing=1 cellpadding=1>
+<TR><TH>data file
+{% for rawfile in rawfiles %}
+<TR><TH><a href={{rawpath}}/{{rawfile}}> {{rawfile}} </a>
+{% endfor %}
+</table>
+{% endblock %}
+</div>
+</div>

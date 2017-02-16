@@ -1,0 +1,34 @@
+{% extends "homepage-base.html" %}
+{% load myfilters %}
+
+<div class="col-md-13 middle">
+    <h2><b>{% block title %}{% endblock %}</b></h2>
+    {% block main %}
+<p>
+<p align="justify" line-height=21px>
+This page shows the taxonomic profile from a single run of the HMP2 workflow.  Each run is comprised of a set 
+of data that has been uploaded to the HMP2 servers.  Once there, it is filtered for quality and error checked
+for completeness.  After the QC phase, the data is run on a specific Anadama pipeline.  After the pipeline
+completes, the output files can be accumulated into several highlevel charts shown below.  For contact information
+regarding the results and the workflow process, please search <a href=https://ibdmdb.org/enrollment> here.</a>
+</p>
+<div align=center>
+<H5> <B>Run Status: </B></H5>
+<table border="1" summary="{{ run }} on the HMP2 Anadama pipeline" cellspacing=5 cellpadding=5>
+<TR><TH>study<TH>type<TH>week<TH>deposition date<TH>completion date
+<TR><TD>{{study}}<TD>{{type}}<TD>{{week}}<TD>{{sdate}}<TD>{{fdate}}
+</table>
+<P>
+</div>
+
+<div align=center>
+  <H5> <B>Charts: </B></H5>
+  {% for i in barchartrange %}
+    <a href={{barpath}}/{{barchart|lookup:i}}>Taxonomy profiles</a>
+  {% endfor %}
+  {% for i in chartrange %}
+    <img src={{chartpath}}/{{charts|lookup:i}}>
+  {% endfor %}
+</div>
+{% endblock %}
+</div>
