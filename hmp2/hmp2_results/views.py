@@ -284,6 +284,10 @@ def products(request, path='', template="hmp2-products.html"):
                 "name": "Merged Tables",
                 "slug": "merged",
                 },
+            ".peptide_rollup.txt": {
+                "name": "Peptide Roll Up",
+                "slug": "peprollup"
+                },
             }
 
         jsonfiles = dict()
@@ -307,7 +311,7 @@ def products(request, path='', template="hmp2-products.html"):
             del filetypes[k]
 
         selected = ""
-        for s in ("_tax.txt", ".biom", ".tar.bz2", '.png'):
+        for s in ("_tax.txt", ".biom", ".tar.bz2", '.png', ".peptide_rollup.txt"):
             if s in filetypes:
                 selected = s
                 break
@@ -439,7 +443,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
         #import sys; print >> sys.stderr, "type: " + type
 
         if type == "WGS":
-            sanitized_type = "Metegenomes"
+            sanitized_type = "Metagenomes"
 
         data_extensions = ['.fa']
         rawpath = "/seq/ibdmdb/processing/" + '/'.join(path_list(path)[2:-1])
@@ -448,7 +452,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
         logfiles = dict()
         for file in walk(rawpath, '.log'):
             logfiles[file.replace('_clean.log', '.fastq')] = _products_xlate(file)
-        for ftype in ('.fa', '.fastq', '.csv'):
+        for ftype in ('.fa', '.fastq', '.csv', '.raw'):
             for file in walk(rawpath, ftype):
                 rawfiles.append(
                     dict(f=_products_xlate(file), l=logfiles.get(file))
@@ -502,7 +506,7 @@ def metadata(request, path='', template="hmp2-metadata.html"):
         #import sys; print >> sys.stderr, "type: " + type
 
         if type == "WGS":
-            sanitized_type = "Metegenomes"
+            sanitized_type = "Metagenomes"
 
         data_extensions = ['.txt']
         metapath = "/seq/ibdmdb/processing/" + '/'.join(path_list(path)[2:-1])
