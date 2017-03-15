@@ -1,3 +1,7 @@
+This webapp contains the IBDMDB Results page.
+
+========
+
 To start the mezzanine application:
 
 $ sudo -u ibdmdb /bin/bash
