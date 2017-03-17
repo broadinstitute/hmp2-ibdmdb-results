@@ -1,0 +1,56 @@
+{% extends "homepage-base.html" %}
+{% load myfilters %}
+{% block main %}
+<div class="row">
+  <div class="page-header">
+    <h1>Results</h1>
+    <p>
+      This page shows the high level results over all of the HMP2
+      pipelines.  Each run is comprised of a set of data that has been
+      uploaded to the HMP2 servers.  Once there, it is filtered for
+      quality and error checked for completeness and saved under the
+      <code>raw files</code> page.  After the QC phase, the data is run
+      on a specific Anadama pipeline, producing several types of data
+      products.  Each data product for a project is saved on
+      the <code>products</code>.  For contact information
+      regarding the results and the workflow process, please search
+      <a href=https://ibdmdb.org/enrollment> here.</a>
+    </p>
+  </div>
+</div>
+
+<div class="row">
+  <a class="btn btn-primary" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/{{joined_meta_file}}"> Download HMP2 Metadata</a>
+  <a class="btn btn-primary" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/{{unjoined_meta_file}}"> Download HMP2 Metadata (Unjoined)</a>
+  <a class="btn btn-primary" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/anadama_run.log"> Download Provenance Log</a>
+</div>
+
+<div class="row">
+  <h3> Available Studies </h3>
+  <div class="span8 offset2">
+    <table class="table table-bordered table-striped">
+      <thead>
+	<tr>
+	  <th>Name</th>
+	  <th>Data type</th>
+	  <th>Week</th>
+	  <th>Products</th>
+	  <th>Raw data</th>
+	</tr>
+      </thead>
+      <tbody>
+	{% for i in range %}
+	<tr>
+	  <td>{{study|lookup:i }}</td>
+	  <td>{{types|lookup:i }}</td>
+	  <td>{{week|lookup:i }}</td>
+	  <td> {% if products|lookup:i %} <a href={{products|lookup:i}}>products</a> {% endif %} </td>
+	  <td> {% if rawfiles|lookup:i %} <a href={{rawfiles|lookup:i}}>raw files</a>{% endif %} </td>
+	</tr>
+	{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div> <!-- end row -->
+
+{% endblock %}

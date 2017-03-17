@@ -1,0 +1,29 @@
+{% extends "homepage-base.html" %}
+{% load myfilters %}
+<div class="col-md-13 middle">
+    <h2><b>{% block title %}{% endblock %}</b></h2>
+    {% block main %}
+<p>
+<p align="justify" line-height=21px>
+This page shows the high level results over all of the HMP2 workflows.  Each run is comprised of a set 
+of data that has been uploaded to the HMP2 servers.  Once there, it is filtered for quality and error checked
+for completeness.  After the QC phase, the data is run on a specific Anadama pipeline.  After the pipeline
+completes, the output files can be accumulated into several highlevel charts shown below.  For contact information
+regarding the results and the workflow process, please search <a href=https://ibdmdb.org/enrollment> here.</a>
+</p>
+<div align=center>
+<H5> <B>Run Summary: </B></H5>
+<table border="1" summary="{{ run }} on the HMP2 Anadama pipeline" cellspacing=10 cellpadding=3>
+<TR><TH>study<TH>data type<TH>week<TH>results
+{% for i in range %}
+<TR height=0 width=80>
+<TD><font face="Geneva, Arial" size=1>{{study|lookup:i }}</font>
+<TD><font face="Geneva, Arial" size=1>{{ types|lookup:i }}</font>
+<TD><font face="Geneva, Arial" size=1>{{week|lookup:i}}</font>
+<TD><font face="Geneva, Arial" size=1><a href={{htmlfiles|lookup:i}}> {{ detail|lookup:i }}</a></font>
+{% endfor %}
+</table>
+<P>
+</div>
+{% endblock %}
+</div>
