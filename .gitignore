@@ -7,7 +7,7 @@
 local_settings.py
 venv
 .env
-static/
+.vscode/
 
 ## File from the caching process used
 data_cache_fs.txt   

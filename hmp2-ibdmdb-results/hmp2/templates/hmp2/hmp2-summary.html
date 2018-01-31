@@ -33,7 +33,8 @@
 	<tr>
 	  <th>Name</th>
 	  <th>Data type</th>
-	  <th>Week</th>
+    <th>Week</th>
+    <th>Summary</th>
 	  <th>Products</th>
 	  <th>Raw data</th>
 	</tr>
@@ -43,7 +44,8 @@
 	<tr>
 	  <td>{{study|lookup:i }}</td>
 	  <td>{{types|lookup:i }}</td>
-	  <td>{{week|lookup:i }}</td>
+    <td>{{week|lookup:i }}</td>
+    <td> {% if summary|lookup:i %} <a href={{summary|lookup:i}}>summary</a> {% endif %}</td>
 	  <td> {% if products|lookup:i %} <a href={{products|lookup:i}}>products</a> {% endif %} </td>
 	  <td> {% if rawfiles|lookup:i %} <a href={{rawfiles|lookup:i}}>raw files</a>{% endif %} </td>
 	</tr>

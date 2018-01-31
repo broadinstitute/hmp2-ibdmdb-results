@@ -2,8 +2,9 @@
 import re
 import sys
 import time
-import os.path
+import os
 import datetime
+import itertools
 import subprocess
 
 from django.http import Http404, HttpResponse
@@ -21,13 +22,15 @@ processing_cache_file = '/local/ibdmdb/mezzanine/hmp2/processing_cache_fs.txt'
 public_cache_file = '/local/ibdmdb/mezzanine/hmp2/public_cache_fs.txt'
 
 def _products_xlate(file):
+    import sys; print >> sys.stderr, file
     if 'mibc_products' in file:
         return file.split('mibc_products/')[1]
     if 'anpan_products' in file:
         return file.split('anpan_products/')[1]
     if 'anadama_products' in file:
         return file.split('anadama_products/')[1]
-        
+    else:
+        return os.path.basename(file)
 
 class filesystem(object):
     """ walking the broad directory structure is expensive for web requests.
@@ -62,11 +65,10 @@ class filesystem(object):
     def walk(self):
         cache = []
         for line in self.disk_cache():
-            #print >> sys.stderr, "line: " + line
             cache.append(line.strip())
         return cache
 
-    def match(self, target, now):
+    def match(self, targets, tags, now):
         if now != self.date:
             print >> sys.stderr, "rebuilding cache for " + self.topdir
             print >> sys.stderr, "now: " + str(now) + " self.data: " + str(self.date)
@@ -74,7 +76,10 @@ class filesystem(object):
             self.date = now
         
         print >> sys.stderr, "cache has " + str(len(self.filesystem_cache)) + " entries."
-        return [file for file in self.filesystem_cache if file.endswith(target)]
+        files = [file for file in self.filesystem_cache for target in targets if file.endswith(target)]
+        if tags:
+            files = [file for file in files if any(tag in file for tag in tags)]
+        return files
     
     def endswith(self, target, now):
         if now != self.date:
@@ -82,23 +87,23 @@ class filesystem(object):
         return [file for file in self.filesystem_cache if file.endswith(target)]
 
 
-def walk(topdir, target):
+def walk(topdir, targets, tags=[]):
     global cache_dict
     if cache_dict.get(topdir) is None:
         fs = filesystem(topdir)
         cache_dict[topdir] = fs
-    return cache_dict.get(topdir).match(target, datetime.date.today())
+    return cache_dict.get(topdir).match(targets, tags, datetime.date.today())
         
 
 def convert_to_web(files, branch):
     result = []
     for file in files:
-        #import sys; print >> sys.stderr, "ofile: ", file
+        import sys; print >> sys.stderr, "ofile: ", file
         filesegs = file.split('/')[4:]
         filesegs.insert(0,branch)
         
         f = '/'.join(filesegs)
-        #import sys; print >> sys.stderr, "newfile: ", f
+        import sys; print >> sys.stderr, "newfile: ", f
         result.append("/tunnel/" + f)
     return result 
 
@@ -126,19 +131,13 @@ def summary(request, path='', template="hmp2-summary.html"):
     if path[-1] == '/':
         path = path[:-1]
     
-    #import sys; print >> sys.stderr, "path: " + path
     container_path, object_path = os.path.split(path)
     if object_path == "summary.html":
 
         template="hmp2-summary.html"
-        # get all *.html files in public folder that resize immediately under a 'mibc_products' directory
-        # strip out summary.html file itself
-        tmpfiles = walk("/seq/ibdmdb/public", "complete.html")
+        tmpfiles = walk("/seq/ibdmdb/public", ["complete.html"])
         for tfile in list(tmpfiles):
             tfilesegs = tfile.split("/")
-            #indx = tfilesegs.index('mibc_products')
-            #if indx != len(tfilesegs) - 2:
-            #    tmpfiles.remove(tfile)
 
         htmlfiles = convert_to_web(tmpfiles, "public")
         types = []
@@ -151,10 +150,15 @@ def summary(request, path='', template="hmp2-summary.html"):
         metafiles = []
         start=True
         for file in htmlfiles:
-            #import sys; print >> sys.stderr, "nfile: " + file
             study.append(file.split('/')[3])
             if file.split('/')[4] == 'WGS':
                 types.append("Metagenomes")
+            elif file.split('/')[4] == 'MTX':
+                types.append("Metatranscriptomes")
+            elif file.split('/')[4] == 'HTX':
+                types.append("Host Transcriptomes")
+            elif file.split('/')[4] == 'HG':
+                types.append("Host Genomes")
             else:
                 types.append(file.split('/')[4])
             theweek = "20" + file.split('/')[5]
@@ -163,7 +167,7 @@ def summary(request, path='', template="hmp2-summary.html"):
             # products
             segs = file.split('/')[:-1]
             segs.append("products")
-            if file.split('/')[4] == 'Metabolites':
+            if file.split('/')[4] == 'HG':
                 products.append(None)
             else:
                 products.append('/'.join(segs))
@@ -177,22 +181,19 @@ def summary(request, path='', template="hmp2-summary.html"):
             # raw
             segs = file.split('/')[:-1]
             segs.append("rawfiles")
-            #if file.split('/')[4] == 'Metabolites':
-            #    raw.append(None)
-            #else:
-            #    raw.append('/'.join(segs))
-            raw.append('/'.join(segs))
+            if file.split('/')[4] == 'Metabolites':
+                raw.append(None)
+            elif file.split('/')[4] == "HTX":
+                raw.append(None)
+            elif files.split('/')[4] == "Serology":
+                raw.append(None)                
+            else:
+                raw.append('/'.join(segs))
 
             meta = file.split('/')[:-1]
             meta.append("metadata")
             metafiles.append('/'.join(meta))
 
-        csvfiles = map(os.path.basename, walk("/seq/ibdmdb/public", ".csv"))
-        joined_meta_file = sorted([f for f in csvfiles if "project_metadata" in f],
-                                  key=lambda f: int(re.sub(r'\D+', '', f) or 0))[-1]
-        unjoined_meta_file = sorted([f for f in csvfiles if "unjoined_metadata" in f],
-                                    key=lambda f: int(re.sub(r'\D+', '', f) or 0))[-1]
-        
         return render_to_response(
             template,
             {
@@ -204,12 +205,11 @@ def summary(request, path='', template="hmp2-summary.html"):
                 'week': week,
                 'detail': detail,
                 'products': products,
+                'reports': types,
                 'charts': charts,
                 'rawfiles': raw,
                 'htmlfiles': htmlfiles,
                 'metafiles': metafiles,
-                'joined_meta_file': joined_meta_file,
-                'unjoined_meta_file': unjoined_meta_file,
             },
             context_instance=RequestContext(request)
             )
@@ -225,15 +225,12 @@ def path_list(path):
 def products(request, path='', template="hmp2-products.html"):
 
     path = request.path
-    #import sys; print >> sys.stderr, "biomfiles"
-    #import sys; print >> sys.stderr, "path: " + path
     path = path.replace("%20", " ")
     path = path.replace("%3A", ":")
     if path[-1] == '/':
         path = path[:-1]
     container_path, object_path = os.path.split(path)
     
-    #import sys; print >> sys.stderr, "object_path: " + object_path
     if object_path == "products":
 
         barchart = "barchart"
@@ -241,64 +238,100 @@ def products(request, path='', template="hmp2-products.html"):
         heatmap = None
         rawfiles = []
         productfiles = []
+        product_info = []
         startpath = "/seq/ibdmdb/data_deposition/" + '/'.join(path_list(path)[2:-2])
-        #import sys; print >> sys.stderr, "startpath: " + startpath
         startdate = time.ctime(os.path.getctime(startpath))
         finishpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        #import sys; print >> sys.stderr, "finishpath: " + finishpath
         finishdate = time.ctime(os.path.getctime(finishpath))
-        user = path_list(path)[-3]
-        week = path_list(path)[-4]
-        type = path_list(path)[-5]
-        study = path_list(path)[-6]
+        user = "carze"
+        week = path_list(path)[-2]
+        type = path_list(path)[-3]
+        study = path_list(path)[-4]
         sanitized_type = type
  
-        #import sys; print >> sys.stderr, "type: " + type
-
         if type == "WGS":
-            sanitized_type = "Metegenomes"
+            sanitized_type = "Metagenomes"
+            product_info = [
+                {'label': 'Gene Calls', 'desc': 'Contain GFF3 + Protein CDS'}
+            ]
+        elif type == "MTX":
+            sanitized_type = "Metatranscriptomes"
+        elif type == "Proteomics":
+            product_info = [
+                             {'label': '1pep', 'desc': '1 Peptide per Protein'},
+                             {'label': '2pep', 'desc': '2 Peptides per Protein'}
+                           ]
 
         webproducts = []
         data_extensions = ['.biom']
         rawpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        #print >> sys.stderr, "rawpath: " + rawpath
-        #possible_rawfiles = walk(rawpath)
+
         filetypes = { 
-            '.biom': { 
+            'taxbiomtype': { 
+                "ext": ["taxonomic_profile.biom"],
                 "name": "Taxonomic Profiles (BIOM)",
-                "slug": "biomtype"
+                "slug": "taxbiomtype"
                 }, 
-            '.tar.bz2': { 
+            'funcbiomtype': { 
+                "ext": ["_picrust.biom"],
+                "name": "Functional Profiles (BIOM)",
+                "slug": "funcbiomtype"
+                }, 
+            'functarball': { 
+                "ext": ["_humann2.tar.bz2"],
                 "name": "Functional Profiles", 
-                "slug": "functype" 
+                "slug": "functarball" 
                 }, 
-            '_tax.txt': { 
+            "rolluptype": {
+                "ext": ["ppm.tsv.gz"],
+                "name": "Peptide Roll Up (Text)",
+                "slug": "rolluptype"
+                },
+            "rollupbiomtype": {
+                "ext": ["ppm.biom.gz"],
+                "name": "Peptide Roll Up (BIOM)",
+                "slug": "rollupbiomtype"
+                },
+            "assembly_contigs": {
+                "ext": ["_contigs.fna.gz"],
+                "name": "Contigs",
+                "slug": "assembly_contigs"
+            },
+            "assembly_genes": {
+                "ext": ["_genes.tar.bz2"],
+                "name": "Gene Calls",
+                "slug": "assembly_genes"
+            },
+            'elisaftype': {
+                "ext": ["_ELISA_Data.tsv"],
+                "name": "ELISA",
+                "slug": "elisatype"
+            },
+            'taxproftype': { 
+                "ext": ["taxonomic_profile.tsv"],
                 "name": "Taxonomic Profiles (Text)",
                 "slug": "taxproftype"
                 },
-            ".png": {
-                "name": "Figures",
-                "slug": "figtype"
-                },
-            ".merged.tsv": {
+            "merged": {
+                "ext": ["s.tsv.gz", "s.biom.gz", "s.csv.gz"],
                 "name": "Merged Tables",
                 "slug": "merged",
-                },
-            ".peptide_rollup.txt": {
-                "name": "Peptide Roll Up",
-                "slug": "peprollup"
-                },
             }
+        }
 
         jsonfiles = dict()
-        for file in walk(rawpath, ".json"):
+        for file in walk(rawpath, [".json"]):
             jsonfiles[ file.replace('.json', '') ] = _products_xlate(file)
         for ftype in filetypes.iterkeys():
-            for file in walk(rawpath, ftype):
+            for file in walk(rawpath, filetypes[ftype].get('ext'), filetypes[ftype].get('tags', [])):
+                if 'metaphlan' in file:
+                    continue
+                elif 'merge' in file:
+                    continue
+
                 filetypes[ftype]['keep'] = True
                 webproducts.append(
                     dict(f=_products_xlate(file), 
-                         l=jsonfiles.get(file.replace(ftype, '')),
                          t=ftype)
                     )
                 
@@ -311,7 +344,9 @@ def products(request, path='', template="hmp2-products.html"):
             del filetypes[k]
 
         selected = ""
-        for s in ("_tax.txt", ".biom", ".tar.bz2", '.png', ".peptide_rollup.txt"):
+        for s in ("functarball", "taxbiomtype", "merged", "taxproftype", 
+                  "rolluptype", "rollupbiomtype", "mbx_counts",
+                  "assembly_contigs", "assembly_genes"):
             if s in filetypes:
                 selected = s
                 break
@@ -326,6 +361,7 @@ def products(request, path='', template="hmp2-products.html"):
                                'user': user,
                                'type': sanitized_type,
                                'study': study,
+                               'product_info': product_info,
                                'productpath': productpath,
                                'productfiles': webproducts,
                                'filetypes': filetypes,
@@ -333,127 +369,60 @@ def products(request, path='', template="hmp2-products.html"):
                               context_instance=RequestContext(request))
 
 
-def taxonomy(request, path='', template="hmp2-taxonomy.html"):
-
-    path = request.path
-    #import sys; print >> sys.stderr, "taxonomy"
-    #import sys; print >> sys.stderr, "path: " + path
-    path = path.replace("%20", " ")
-    path = path.replace("%3A", ":")
-    if path[-1] == '/':
-        path = path[:-1]
-    container_path, object_path = os.path.split(path)
-    
-    #import sys; print >> sys.stderr, "object_path: " + object_path
-    if object_path == "charts":
-
-        barchart = "barchart"
-        pcoa = None
-        heatmap = None
-        rawfiles = []
-        productfiles = []
-        startpath = "/seq/ibdmdb/data_deposition/" + '/'.join(path_list(path)[2:-2])
-        #import sys; print >> sys.stderr, "startpath: " + startpath
-        startdate = time.ctime(os.path.getctime(startpath))
-        finishpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        #import sys; print >> sys.stderr, "finishpath: " + finishpath
-        finishdate = time.ctime(os.path.getctime(finishpath))
-        user = path_list(path)[-3]
-        week = path_list(path)[-4]
-        type = path_list(path)[-5]
-        study = path_list(path)[-6]
-        sanitized_type = type
- 
-        rawbarpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        #print >> sys.stderr,"rawbarpath: " + rawbarpath
-        barchart = []
-        for file in walk(rawbarpath, 'bar_charts.html'):
-            if 'mibc_products' in file:
-                barchart.append(file.split('mibc_products/')[1])
-            if 'anpan_products' in file:
-                barchart.append(file.split('anpan_products/')[1])
-            if 'anadama_products' in file:
-                barchart.append(file.split('anadama_products/')[1])
-            #print >> sys.stderr,"barchart: " + barchart[0]
-
-        barpath = "/tunnel/cb/document/Public/" + '/'.join(path_list(path)[2:-1])
-        #print >> sys.stderr,"barpath: " + barpath
-
-        if type == "16S":
-            sanitized_type = type
-        elif type == "WGS":
-            sanitized_type = "Metegenomes"
-
-        charts = []
-        rawpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        #print >> sys.stderr, "rawpath: " + rawpath
-        #possible_rawfiles = walk(rawpath)
-        for chart in os.listdir(rawpath):
-            if chart.endswith(".png"):
-                charts.append(chart)
-        #charts.append("otu_table_merged_meta.biom.pcl_pcoa_plot-BarcodeSequence.png")
-        #charts.append("otu_table_merged_meta.biom.pcl_pcoa_plot-LinkerPrimerSequence.png")
-        #charts.append("otu_table_merged_meta.biom.pcl_pcoa_plot-Description.png")
-
-        chartpath = "/tunnel/cb/document/Public/" + '/'.join(path_list(path)[2:-1])
-        return render_to_response(template,
-                              {'path': path,
-                               'sdate': startdate,
-                               'fdate': finishdate,
-                               'week': week,
-                               'user': user,
-                               'type': sanitized_type,
-                               'study': study,
-                               'barpath': barpath,
-                               'barchart': barchart,
-                               'barchartrange': range(len(barchart)),
-                               'chartpath': chartpath,
-                               'charts': charts,
-                               'chartrange' : range(len(charts))},
-                              context_instance=RequestContext(request))
-
-
 def rawfiles(request, path='', template="hmp2-rawfiles.html"):
 
     path = request.path
-    #import sys; print >> sys.stderr, "rawfiles"
-    #import sys; print >> sys.stderr, "path: " + path
     path = path.replace("%20", " ")
     path = path.replace("%3A", ":")
     if path[-1] == '/':
         path = path[:-1]
     container_path, object_path = os.path.split(path)
-    
-    #import sys; print >> sys.stderr, "object_path: " + object_path
+
     if object_path == "rawfiles":
 
         rawfiles = []
         startpath = "/seq/ibdmdb/data_deposition/" + '/'.join(path_list(path)[2:-2])
-        #import sys; print >> sys.stderr, "startpath: " + startpath
         startdate = time.ctime(os.path.getctime(startpath))
         finishpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        #import sys; print >> sys.stderr, "finishpath: " + finishpath
         finishdate = time.ctime(os.path.getctime(finishpath))
-        user = path_list(path)[-3]
-        week = path_list(path)[-4]
-        type = path_list(path)[-5]
-        study = path_list(path)[-6]
+        user = "carze"
+        week = path_list(path)[-2]
+        type = path_list(path)[-3]
+        study = path_list(path)[-4]
         sanitized_type = type
  
-        #import sys; print >> sys.stderr, "type: " + type
-
         if type == "WGS":
             sanitized_type = "Metagenomes"
 
         data_extensions = ['.fa']
         rawpath = "/seq/ibdmdb/processing/" + '/'.join(path_list(path)[2:-1])
-        #print >> sys.stderr, "rawpath: " + rawpath
-        #if type == "16S":
         logfiles = dict()
-        for file in walk(rawpath, '.log'):
+        for file in walk(rawpath, ['.log']):
             logfiles[file.replace('_clean.log', '.fastq')] = _products_xlate(file)
-        for ftype in ('.fa', '.fastq', '.csv', '.raw'):
-            for file in walk(rawpath, ftype):
+            logfiles[file.replace('_clean.log', '.fastq.bz2')] = _products_xlate(file)
+            logfiles[file.replace('_clean.log', '.fastq.gz')] = _products_xlate(file)
+            logfiles[file.replace('.log', '.fastq.gz')] = _products_xlate(file)
+        for ftype in ('.fa', '.fastq', '.csv', '.raw', '.raw.gz', '.fastq.bz2', '.fastq.gz', '.tar', '.bam'):
+            for file in walk(rawpath, [ftype]):
+                if "knead" in file:
+                    continue
+                elif "bowtie2" in file:
+                    continue
+                elif "trimmed" in file:
+                    continue
+                elif 'truncated' in file:
+                    continue
+                elif 'sort' in file:
+                    continue
+                elif 'nonchimeric' in file:
+                    continue
+                elif 'otu' in file:
+                    continue
+                elif 'derep' in file:
+                    continue
+                elif 'clean.fastq' in file:
+                    continue
+
                 rawfiles.append(
                     dict(f=_products_xlate(file), l=logfiles.get(file))
                     )
@@ -479,23 +448,18 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
 def metadata(request, path='', template="hmp2-metadata.html"):
 
     path = request.path
-    #import sys; print >> sys.stderr, "rawfiles"
-    #import sys; print >> sys.stderr, "path: " + path
     path = path.replace("%20", " ")
     path = path.replace("%3A", ":")
     if path[-1] == '/':
         path = path[:-1]
     container_path, object_path = os.path.split(path)
     
-    #import sys; print >> sys.stderr, "object_path: " + object_path
     if object_path == "metadata":
 
         metafiles = []
         startpath = "/seq/ibdmdb/data_deposition/" + '/'.join(path_list(path)[2:-2])
-        #import sys; print >> sys.stderr, "startpath: " + startpath
         startdate = time.ctime(os.path.getctime(startpath))
         finishpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        #import sys; print >> sys.stderr, "finishpath: " + finishpath
         finishdate = time.ctime(os.path.getctime(finishpath))
         user = path_list(path)[-3]
         week = path_list(path)[-4]
@@ -503,15 +467,11 @@ def metadata(request, path='', template="hmp2-metadata.html"):
         study = path_list(path)[-6]
         sanitized_type = type
  
-        #import sys; print >> sys.stderr, "type: " + type
-
         if type == "WGS":
-            sanitized_type = "Metagenomes"
+            sanitized_type = "Metegenomes"
 
         data_extensions = ['.txt']
         metapath = "/seq/ibdmdb/processing/" + '/'.join(path_list(path)[2:-1])
-        #print >> sys.stderr, "rawpath: " + rawpath
-        #possible_rawfiles = walk(rawpath)
         for file in walk(metapath, 'map.txt'):
             if file.endswith('mibc_products/map.txt'):
                 metafiles.append(file.split('mibc_products/')[1])
@@ -522,15 +482,10 @@ def metadata(request, path='', template="hmp2-metadata.html"):
         if len(metafiles) > 0:
             print >> sys.stderr,"metafiles: " + metafiles[0] + " size: " + str(len(metafiles))
 
-
         # convert metapath to web accessible path
         metapath = "/tunnel/cb/document/Processing/" + '/'.join(path_list(path)[2:-1])
         print >> sys.stderr, "metapath: " + metapath
 
-        #try:
-        #    dum, extension = os.path.splitext(metafiles[0])
-        #except IndexError:
-        #    print >> sys.stderr, "IndexError: "
         return render_to_response(template,
                               {'path': path,
                                'sdate': startdate,
@@ -545,7 +500,7 @@ def metadata(request, path='', template="hmp2-metadata.html"):
                               context_instance=RequestContext(request))
 
 def tardownload(request, path='', template=""):
-    pathdict = {"products": "/seq/ibdmdb/processing",
+    pathdict = {"products": "/seq/ibdmdb/public",
                   "charts": "/seq/ibdmdb/public",
                 "rawfiles": "/seq/ibdmdb/processing",
                 "metadata": "/seq/ibdmdb/processing"}
@@ -556,6 +511,7 @@ def tardownload(request, path='', template=""):
         raise Http404()
     middle = re.sub(r'^/tunnel/public/', '', head)
     tarfile = tar([ os.path.join(base, middle, fname) for fname in request.GET.getlist('fs') ])
+
     resp = HttpResponse(tarfile, content_type="application/x-tar")
     resp['Content-Disposition'] = "attachment; filename=ibdmdb_download.tar"
     return resp
