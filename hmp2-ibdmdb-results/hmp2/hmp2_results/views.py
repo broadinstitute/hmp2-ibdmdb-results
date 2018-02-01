@@ -123,6 +123,68 @@ def tar(fnames):
     return proc.stdout
 
 
+def dataset_summary(request, project, data_type, week):
+    """Retrieves the AnADAMA2 viz-generated summary pages for the given
+    project dataset.
+
+    A combination of project + data type is needed to
+    retrieve the static HTML + javascript and images required to render
+    the summary page properly.
+
+    Args:
+        request (django.HttpRequest): The django request object.
+        project (string): The project for this dataset (e.x. HMP2).
+        data_type (string): The data type to be summarized (e.x. WGS).
+        week (string): The week + year combination dataset completed processing.
+
+    Returns:
+        django.template.Template: The static HTML page rendered to the user.
+
+    """
+    logger = logging.getLogger('ibdmdb')
+
+    file_cache_dict = map(str.strip, open(public_cache_file).readlines())
+    summary_groups = itertools.groupby(file_cache_dict, lambda x: 'summary' in x and project in x and data_type in x and week in x)
+
+    logger.info("Summary groups:", summary_groups)
+
+    # If this is a list > 1 than something went wrong here
+    summary_files = []
+
+    for (group, items) in summary_groups:
+        if not group:
+            continue
+
+        summary_files.extend(list(items))
+
+    if summary_files:
+        # We should have a summary.html file, a summary.json file and a
+        # collection of images here that we will want to handle.
+        #
+        # The images and json file should go to our AnADAMA2 static directory
+        # to be served with our static content.
+        anadama2_static_dir = os.path.join(anadama2_static_base,
+                                           project,
+                                           data_type, week, 'summary')
+
+        if not os.path.isdir(anadama2_static_dir):
+           logger.info('Static dir being created %s' % anadama2_static_dir)
+           os.makedirs(anadama2_static_dir)
+
+        complete_file = os.path.join(anadama2_static_dir, 'complete')
+        if not os.path.exists(complete_file):
+                        logger.info('Creating symylink of all files')
+            [os.symlink(static_file, os.path.join(anadama2_static_dir, os.path.basename(static_file))) for static_file in summary_files]
+            open(complete_file, 'a').close()
+
+        # Need to add a check in here to make sure that our summary.html file does exist.
+        summary_url = os.path.join('/static', 'anadama2', project, data_type, week, 'summary', 'summary.html')
+
+        return HttpResponseRedirect(summary_url)
+        #return HttpResponse(template.render(Context()))
+    return HttpResponse(status=500)
+
+
 def summary(request, path='', template="hmp2-summary.html"):
 
     path = request.path
@@ -164,6 +226,7 @@ def summary(request, path='', template="hmp2-summary.html"):
             theweek = "20" + file.split('/')[5]
             theweek = theweek[:4] + '.' + theweek[4:]
             week.append(theweek)
+            
             # products
             segs = file.split('/')[:-1]
             segs.append("products")
@@ -171,13 +234,7 @@ def summary(request, path='', template="hmp2-summary.html"):
                 products.append(None)
             else:
                 products.append('/'.join(segs))
-            # charts
-            segs = file.split('/')[:-1]
-            segs.append("charts")
-            if file.split('/')[4] == 'Metabolites':
-                charts.append(None)
-            else:
-                charts.append('/'.join(segs))
+
             # raw
             segs = file.split('/')[:-1]
             segs.append("rawfiles")
@@ -190,9 +247,6 @@ def summary(request, path='', template="hmp2-summary.html"):
             else:
                 raw.append('/'.join(segs))
 
-            meta = file.split('/')[:-1]
-            meta.append("metadata")
-            metafiles.append('/'.join(meta))
 
         return render_to_response(
             template,
@@ -402,6 +456,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
             logfiles[file.replace('_clean.log', '.fastq.bz2')] = _products_xlate(file)
             logfiles[file.replace('_clean.log', '.fastq.gz')] = _products_xlate(file)
             logfiles[file.replace('.log', '.fastq.gz')] = _products_xlate(file)
+
         for ftype in ('.fa', '.fastq', '.csv', '.raw', '.raw.gz', '.fastq.bz2', '.fastq.gz', '.tar', '.bam'):
             for file in walk(rawpath, [ftype]):
                 if "knead" in file:
@@ -423,9 +478,18 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                 elif 'clean.fastq' in file:
                     continue
 
+                # In an attempt to get a categorization going that is similar to what we see when dealing 
+                # with products I'm going to make an assumption that if the path element prior to our file 
+                # is not a numeric (i.e. the week + year combo) it is a categorization we want to dump
+                # these files under to be tab'd out.
+                file_sub_folder = file.split(os.sep)[-2]
+                category = file_sub_folder if file_sub_folder.isdigit() else "Default"
+                slug = category.strip().lower().replace('-', '_') if category else "Default"
+                categories[category] = slug
+
                 rawfiles.append(
-                    dict(f=_products_xlate(file), l=logfiles.get(file))
-                    )
+                    dict(f=_products_xlate(file), l=logfiles.get(file), c=slug)
+                )
 
         # convert rawpath to web accessible path
         rawpath = "/tunnel/static/" + '/'.join(path_list(path)[2:-1])
@@ -438,66 +502,12 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                                'user': user,
                                'type': sanitized_type,
                                'study': study,
+                               'categories': categories,
                                'rawpath': rawpath,
                                'rawfiles': rawfiles,
                                'logfiles': logfiles},
                               context_instance=RequestContext(request))
 
-
-
-def metadata(request, path='', template="hmp2-metadata.html"):
-
-    path = request.path
-    path = path.replace("%20", " ")
-    path = path.replace("%3A", ":")
-    if path[-1] == '/':
-        path = path[:-1]
-    container_path, object_path = os.path.split(path)
-    
-    if object_path == "metadata":
-
-        metafiles = []
-        startpath = "/seq/ibdmdb/data_deposition/" + '/'.join(path_list(path)[2:-2])
-        startdate = time.ctime(os.path.getctime(startpath))
-        finishpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
-        finishdate = time.ctime(os.path.getctime(finishpath))
-        user = path_list(path)[-3]
-        week = path_list(path)[-4]
-        type = path_list(path)[-5]
-        study = path_list(path)[-6]
-        sanitized_type = type
- 
-        if type == "WGS":
-            sanitized_type = "Metegenomes"
-
-        data_extensions = ['.txt']
-        metapath = "/seq/ibdmdb/processing/" + '/'.join(path_list(path)[2:-1])
-        for file in walk(metapath, 'map.txt'):
-            if file.endswith('mibc_products/map.txt'):
-                metafiles.append(file.split('mibc_products/')[1])
-            if file.endswith('anpan_products/map.txt'):
-                metafiles.append(file.split('anpan_products/')[1])
-            if file.endswith('anadama_products/map.txt'):
-                metafiles.append(file.split('anadama_products/')[1])
-        if len(metafiles) > 0:
-            print >> sys.stderr,"metafiles: " + metafiles[0] + " size: " + str(len(metafiles))
-
-        # convert metapath to web accessible path
-        metapath = "/tunnel/cb/document/Processing/" + '/'.join(path_list(path)[2:-1])
-        print >> sys.stderr, "metapath: " + metapath
-
-        return render_to_response(template,
-                              {'path': path,
-                               'sdate': startdate,
-                               'fdate': finishdate,
-                               'week': week,
-                               'user': user,
-                               'type': sanitized_type,
-                               'study': study,
-                               'metapath': metapath,
-                               'metafiles': metafiles,
-                               'metafilerange' : range(len(metafiles))},
-                              context_instance=RequestContext(request))
 
 def tardownload(request, path='', template=""):
     pathdict = {"products": "/seq/ibdmdb/public",

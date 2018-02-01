@@ -2,9 +2,16 @@ from django.template import Library
 
 register = Library()
 
+
 @register.filter
 def lookup(d, key):
     return d.get(key)
+
+
+@register.filter
+def index(List, i):
+    return List[int(i)]
+
 
 @register.filter
 def get_range( value ):

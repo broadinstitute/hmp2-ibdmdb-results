@@ -16,13 +16,23 @@
       regarding the results and the workflow process, please search
       <a href=https://ibdmdb.org/enrollment> here.</a>
     </p>
+
+    <div class="row" style="padding-top: 6px">
+      <div class="col-md-6 col-md-offset-3">
+          <div class="alert alert-success" role="alert">
+              <strong>FTP transfer is now available for batch downloading.</strong>
+                  <p><strong>Address</strong>: ftp.broadinstitute.org<br />
+                  <strong>Username</strong>: public<br />
+                  <strong>Password</strong>: hmp2_ftp</p>
+          </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <div class="row">
-  <a class="btn btn-primary" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/{{joined_meta_file}}"> Download HMP2 Metadata</a>
-  <a class="btn btn-primary" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/{{unjoined_meta_file}}"> Download HMP2 Metadata (Unjoined)</a>
-  <a class="btn btn-primary" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/anadama_run.log"> Download Provenance Log</a>
+  <a class="btn btn-primary" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/hmp2_metadata.csv"><span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download HMP2 Metadata</a>
+  <a class="btn btn-success" download="anadama_run.log.gz" href="https://ibdmdb.org/tunnel/cb/document/Public/HMP2/Metadata/anadama_run.log.gz"><span class="glyphicon glyphicon-flag" aria-hidden="true"></span> Download Provenance Log</a>
 </div>
 
 <div class="row">
@@ -42,12 +52,12 @@
       <tbody>
 	{% for i in range %}
 	<tr>
-	  <td>{{study|lookup:i }}</td>
-	  <td>{{types|lookup:i }}</td>
-    <td>{{week|lookup:i }}</td>
-    <td> {% if summary|lookup:i %} <a href={{summary|lookup:i}}>summary</a> {% endif %}</td>
-	  <td> {% if products|lookup:i %} <a href={{products|lookup:i}}>products</a> {% endif %} </td>
-	  <td> {% if rawfiles|lookup:i %} <a href={{rawfiles|lookup:i}}>raw files</a>{% endif %} </td>
+	  <td>{{study|index:i }}</td>
+	  <td>{{types|index:i }}</td>
+    <td>{{week|index:i }}</td>
+    <td> {% if summary|index:i %} <a href={{summary|index:i}}>summary</a> {% endif %}</td>
+	  <td> {% if products|index:i %} <a href={{products|index:i}}>products</a> {% endif %} </td>
+	  <td> {% if rawfiles|index:i %} <a href={{rawfiles|index:i}}>raw files</a>{% endif %} </td>
 	</tr>
 	{% endfor %}
       </tbody>
