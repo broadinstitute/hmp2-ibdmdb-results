@@ -6,10 +6,10 @@
 
  /* Displays files grouped into category "slug" and hides any other files. */
 function updateNavs(slug) {
-    $("ul.nav-pills > li").removeClass("active");
-    $("#" + slug).addClass("active");
-    $("tbody > tr:not([data-cateogry='" + slug + "'])").addClass("hidden");
-    $("tbody > tr[data-category='" + slug + "']").removeClass("hidden");
+    $('ul.nav-pills > li').removeClass('active');
+    $('#' + slug).addClass("active");
+    $('tbody > tr:not([data-cateogry="' + slug + '"])').addClass('hidden');
+    $('tbody > tr[data-category="' + slug + '"]').removeClass('hidden');
 }
 
 /* 
@@ -22,9 +22,11 @@ function updateHits() {
 }
 
  jQuery(document).ready(function(){
-     $('.category-selector').click(function() {
-        var slug = $(this).parent().attr('id');
-        updateNavs(slug);
-        updateHits();
-     });
+    updateNavs($('ul.nav-pills > li').first.attr('id'));
+
+    $('.category-selector').click(function() {
+    var slug = $(this).parent().attr('id');
+    updateNavs(slug);
+    updateHits();
+    });
  })

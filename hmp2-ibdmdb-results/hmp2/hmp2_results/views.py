@@ -435,6 +435,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
     if object_path == "rawfiles":
 
         rawfiles = []
+        categories = {}
         startpath = "/seq/ibdmdb/data_deposition/" + '/'.join(path_list(path)[2:-2])
         startdate = time.ctime(os.path.getctime(startpath))
         finishpath = "/seq/ibdmdb/public/" + '/'.join(path_list(path)[2:-1])
@@ -448,7 +449,6 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
         if type == "WGS":
             sanitized_type = "Metagenomes"
 
-        data_extensions = ['.fa']
         rawpath = "/seq/ibdmdb/processing/" + '/'.join(path_list(path)[2:-1])
         logfiles = dict()
         for file in walk(rawpath, ['.log']):
@@ -482,17 +482,22 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                 # with products I'm going to make an assumption that if the path element prior to our file 
                 # is not a numeric (i.e. the week + year combo) it is a categorization we want to dump
                 # these files under to be tab'd out.
-                file_sub_folder = file.split(os.sep)[-2]
-                category = file_sub_folder if file_sub_folder.isdigit() else "Default"
-                slug = category.strip().lower().replace('-', '_') if category else "Default"
+                file_sub_folder = raw_path.split(os.sep)[-1]
+                category = file_sub_folder if not file_sub_folder.isdigit() else "Default"
+                slug = category.strip().lower().replace('-', '_') if category != "Default" else "Default"
                 categories[category] = slug
 
                 rawfiles.append(
-                    dict(f=_products_xlate(file), l=logfiles.get(file), c=slug)
+                    dict(f=_products_xlate(file), l=logfiles.get(file), c=slug, n=file_sub_folder)
                 )
-
+        
         # convert rawpath to web accessible path
-        rawpath = "/tunnel/static/" + '/'.join(path_list(path)[2:-1])
+        rawpath = os.path.join(os.sep, 'tunnel', 'static', *path_list(path[2:-1]))
+
+        # Bit messy here but want to avoid having to set some simple DOM elements 
+        # in javascript at page load that create an obvious refresh of the page post-load.
+        file_counts = {category: len(list(files)) for (category, files) in 
+                       itertools.groupby(sorted(rawfiles), lambda f: f.get('c'))}
 
         return render_to_response(template,
                               {'path': path,
@@ -503,15 +508,18 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                                'type': sanitized_type,
                                'study': study,
                                'categories': categories,
+                               'inital_category': categories.values()[0],
+                               'initial_file_count': file_counts.get(categories.values()[0]),
                                'rawpath': rawpath,
-                               'rawfiles': rawfiles,
+                               'rawfiles': sorted(rawfiles, key=lambda k: k.get('c')),
+                               'has_logs': True if logfiles else False,
                                'logfiles': logfiles},
                               context_instance=RequestContext(request))
 
 
 def tardownload(request, path='', template=""):
     pathdict = {"products": "/seq/ibdmdb/public",
-                  "charts": "/seq/ibdmdb/public",
+                "charts": "/seq/ibdmdb/public",
                 "rawfiles": "/seq/ibdmdb/processing",
                 "metadata": "/seq/ibdmdb/processing"}
 
