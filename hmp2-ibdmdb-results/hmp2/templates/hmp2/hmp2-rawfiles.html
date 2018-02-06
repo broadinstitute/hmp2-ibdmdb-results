@@ -1,5 +1,5 @@
 {% extends "homepage-base.html" %} {% load myfilters %} {% load staticfiles %} {% block extra_js %}
-<script src="{% static "js/hmp2_results.js" %"></script>
+<script src="{% static "js/ibdmdb_results.js" %"></script>
 
 <script>
   $(function () {
@@ -116,12 +116,12 @@
         </thead>
         <tbody>
           {% for rawfile in rawfiles %}
-          <tr {% if rawfile.c != initial_category %}class="hidden"{% endif %} data-contains="{{rawfile.f}}" {% if rawfile.c %}data-category="{{rawfile.c}}"{% endif %}>
+          <tr {% if rawfile.c != "Default" and rawfile.c != initial_category %}class="hidden"{% endif %} data-contains="{{rawfile.f}}" {% if rawfile.c %}data-category="{{rawfile.c}}"{% endif %}>
             <td>
               <input type="checkbox" class="indexable" name="fs" value="{{rawfile.f}}">
             </td>
             <td>
-              <a href="{{rawpath}}/{% if rawfile.c %}{{rawfile.n}}/{% endif %}{{rawfile.f}}">{{rawfile.f}}</a>
+              <a href="{{rawpath}}/{% if rawfile.c  != "Default" %}{{rawfile.n}}/{% endif %}{{rawfile.f}}">{{rawfile.f}}</a>
             </td>
             {% if rawfile.l %}
               <td>

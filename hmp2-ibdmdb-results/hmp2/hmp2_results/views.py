@@ -457,7 +457,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
             logfiles[file.replace('_clean.log', '.fastq.gz')] = _products_xlate(file)
             logfiles[file.replace('.log', '.fastq.gz')] = _products_xlate(file)
 
-        for ftype in ('.fa', '.fastq', '.csv', '.raw', '.raw.gz', '.fastq.bz2', '.fastq.gz', '.tar', '.bam'):
+        for ftype in ('.fa', '.fastq', 'RawFileInventory.csv', '.xlsx', '.pdf', '.raw', '.raw.gz', '.fastq.bz2', '.fastq.gz', '.tar', '.bam'):
             for file in walk(rawpath, [ftype]):
                 if "knead" in file:
                     continue
@@ -492,7 +492,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                 )
         
         # convert rawpath to web accessible path
-        rawpath = os.path.join(os.sep, 'tunnel', 'static', *path_list(path[2:-1]))
+        rawpath = "/tunnel/static/" + '/'.join(path_list(path)[2:-1])
 
         # Bit messy here but want to avoid having to set some simple DOM elements 
         # in javascript at page load that create an obvious refresh of the page post-load.
@@ -508,7 +508,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                                'type': sanitized_type,
                                'study': study,
                                'categories': categories,
-                               'inital_category': categories.values()[0],
+                               'initial_category': categories.values()[0],
                                'initial_file_count': file_counts.get(categories.values()[0]),
                                'rawpath': rawpath,
                                'rawfiles': sorted(rawfiles, key=lambda k: k.get('c')),
