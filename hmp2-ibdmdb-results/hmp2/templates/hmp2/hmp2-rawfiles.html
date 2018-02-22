@@ -1,6 +1,4 @@
 {% extends "homepage-base.html" %} {% load myfilters %} {% load staticfiles %} {% block extra_js %}
-<script src="{% static "site/js/ibdmdb_results.js" %"></script>
-
 <script>
   $(function () {
     var ids = []
@@ -52,7 +50,13 @@
     });
 
   });
-</script> {% endblock extra_js %}{% block main %}
+</script> {% endblock extra_js %}
+{% block extra_head %}
+<script src="{% static "js/hmp2_results.js" %}"></script>
+
+<link rel="stylesheet" href="{% static "css/ibdmdb-downloads.css" %}">
+{% endblock %}
+{% block main %}
 <div class="row">
   <div class="page-header">
     <h1>Raw Files</h1>
@@ -62,6 +66,11 @@
       contact information regarding the results and the workflow process, please search
       <a href=https://ibdmdb.org/enrollment> here.</a>
     </p>
+    {% with template_name='pages/dataset_documentation/'|add:data_type|add:"_raw.html" %}
+      {% if ""|add:template_name|template_exists %}
+          {% include ""|add:template_name %}
+      {% endif %}
+    {% endwith %}
   </div>
 </div>
 

@@ -21,9 +21,17 @@ function updateHits() {
 }
 
  jQuery(document).ready(function(){
-     $('.category-selector').click(function() {
+    $('.category-selector').click(function() {
         var slug = $(this).parent().attr('id');
         updateNavs(slug);
         updateHits();
      });
+
+    $('#details_button').on('click', function() {
+        if ($('#viewdetails').is(':hidden')) {
+            $('#details_button').html('« Dataset details');
+        } else {
+            $('#details_button').html('Dataset details »');
+        }
+    });
  })

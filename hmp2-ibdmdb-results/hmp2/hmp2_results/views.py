@@ -181,7 +181,6 @@ def dataset_summary(request, project, data_type, week):
         summary_url = os.path.join('/static', 'anadama2', project, data_type, week, 'summary', 'summary.html')
 
         return HttpResponseRedirect(summary_url)
-        #return HttpResponse(template.render(Context()))
     return HttpResponse(status=500)
 
 
@@ -512,6 +511,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                                'initial_file_count': file_counts.get(categories.values()[0]),
                                'rawpath': rawpath,
                                'rawfiles': sorted(rawfiles, key=lambda k: k.get('c')),
+                               'data_type': type.lower(),
                                'has_logs': True if logfiles else False,
                                'logfiles': logfiles},
                               context_instance=RequestContext(request))
