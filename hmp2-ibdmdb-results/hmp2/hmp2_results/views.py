@@ -209,6 +209,7 @@ def summary(request, path='', template="hmp2-summary.html"):
         charts = []
         raw = []
         metafiles = []
+        metadata_last_updated = ""
         start=True
         for file in htmlfiles:
             study.append(file.split('/')[3])
@@ -246,6 +247,14 @@ def summary(request, path='', template="hmp2-summary.html"):
             else:
                 raw.append('/'.join(segs))
 
+            # Anytime our metadata is updated we should have a timestamp file
+            # created we can use to update the last time our metadata was 
+            # updated.
+            if file.split('/')[4] == 'Metadata':
+                timestamp_files = walk("/seq/ibdmdb/public", [".timestamp"])
+
+                if len(timestamp_files) == 1:
+                    metadata_last_updated = os.path.splitext(os.path.basename(timestamp_files[0]))[0]
 
         return render_to_response(
             template,
@@ -263,6 +272,7 @@ def summary(request, path='', template="hmp2-summary.html"):
                 'rawfiles': raw,
                 'htmlfiles': htmlfiles,
                 'metafiles': metafiles,
+                'metadata_last_updated': metadata_last_updated
             },
             context_instance=RequestContext(request)
             )

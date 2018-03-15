@@ -3,6 +3,10 @@ caption {
     color: black;
 }
 
+#metadata_timestamp {
+    padding-left: 48px;
+}
+
 h4#dna-samples-tables-of-filtered-reads {
     padding-top: 11px;
 }
