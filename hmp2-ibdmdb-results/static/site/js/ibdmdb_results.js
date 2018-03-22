@@ -25,7 +25,7 @@ function updateHits() {
         var slug = $(this).parent().attr('id');
         updateNavs(slug);
         updateHits();
-     });
+    });
 
     $('#details_button').on('click', function() {
         if ($('#viewdetails').is(':hidden')) {
