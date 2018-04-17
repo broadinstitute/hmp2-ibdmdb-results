@@ -1,6 +1,6 @@
 NAME="hmp2"                                                   # Name of the application
 DJANGODIR=/local/ibdmdb/mezzanine                             # Django project directory
-SOCKFILE=/local/ibdmdb/var/run/gunicorn.sock                  # we will communicte using this unix socket
+SOCKFILE=/var/run/results-gunicorn.sock                       # we will communicte using this unix socket
 USER=ibdmdb                                                   # the user to run as
 GROUP=broad                                                   # the group to run as
 NUM_WORKERS=20                                                # how many worker processes should Gunicorn spawn
@@ -11,7 +11,6 @@ echo "Starting $NAME as `whoami`"
 
 # We have to source another file that has the path to all our binaries
 cd $DJANGODIR
-source ../SOURCE_THIS
 
 # Activate the virtual environment
 source bin/activate

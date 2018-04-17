@@ -209,9 +209,22 @@ def summary(request, path='', template="hmp2-summary.html"):
         charts = []
         raw = []
         metafiles = []
+        complete = []
+        reports = []
         metadata_last_updated = ""
         start=True
         for file in htmlfiles:
+            # Implementing timestamps for metadata files requires
+            # us to have to do some of the trickery below
+            if file.split('/')[4] == 'Metadata':
+                timestamp_files = walk("/seq/ibdmdb/public", [".timestamp"])
+
+                if len(timestamp_files) == 1:
+                    metadata_last_updated = os.path.splitext(os.path.basename(timestamp_files[0]))[0]
+                    continue
+            else:
+                complete.append(file)                
+
             study.append(file.split('/')[3])
             if file.split('/')[4] == 'WGS':
                 types.append("Metagenomes")
@@ -247,6 +260,17 @@ def summary(request, path='', template="hmp2-summary.html"):
             else:
                 raw.append('/'.join(segs))
 
+            # dataset summary reports
+            segs = file.split('/')[:-1]
+            segs.append("summary")
+            report_files = walk("/seq/ibdmdb/" + "/".join(segs[2:]), ["summary.html"])
+
+            if len(summary_files) == 1:
+                report_files = convert_to_web(summary_files, "public")
+                reports.append(report_files[0])
+            else:
+                reports.append(None)            
+
             # Anytime our metadata is updated we should have a timestamp file
             # created we can use to update the last time our metadata was 
             # updated.
@@ -267,6 +291,7 @@ def summary(request, path='', template="hmp2-summary.html"):
                 'week': week,
                 'detail': detail,
                 'products': products,
+                'summary': reports,
                 'reports': types,
                 'charts': charts,
                 'rawfiles': raw,
