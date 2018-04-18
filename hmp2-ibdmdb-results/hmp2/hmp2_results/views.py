@@ -6,8 +6,9 @@ import os
 import datetime
 import itertools
 import subprocess
+import logging
 
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
@@ -165,20 +166,25 @@ def dataset_summary(request, project, data_type, week):
         # to be served with our static content.
         anadama2_static_dir = os.path.join(anadama2_static_base,
                                            project,
-                                           data_type, week, 'summary')
+                                           data_type, week)
 
         if not os.path.isdir(anadama2_static_dir):
-           logger.info('Static dir being created %s' % anadama2_static_dir)
-           os.makedirs(anadama2_static_dir)
-
-        complete_file = os.path.join(anadama2_static_dir, 'complete')
+            logger.info('Static dir being created %s' % anadama2_static_dir)
+            os.makedirs(anadama2_static_dir)
+            
+        complete_file = os.path.join(anadama2_static_dir, 'summary', 'complete')
         if not os.path.exists(complete_file):
-                        logger.info('Creating symylink of all files')
-            [os.symlink(static_file, os.path.join(anadama2_static_dir, os.path.basename(static_file))) for static_file in summary_files]
+            logger.info('Creating symylink of all files')
+
+            # Pull out the first file; get the basename and symlink that into the static dir folder
+            # TODO: Add a check here to see if we retrieve nothing -- which means something bad happened..
+            summary_html = next((x for x in summary_files if "summary.html" in x), None)
+            summary_base = os.path.dirname(summary_html)
+            os.symlink(summary_base, os.path.join(anadama2_static_dir, 'summary'))
             open(complete_file, 'a').close()
 
         # Need to add a check in here to make sure that our summary.html file does exist.
-        summary_url = os.path.join('/static', 'anadama2', project, data_type, week, 'summary', 'summary.html')
+        summary_url = os.path.join('/dataset_summary', project, data_type, week, 'summary', 'summary.html')
 
         return HttpResponseRedirect(summary_url)
     return HttpResponse(status=500)
@@ -263,39 +269,30 @@ def summary(request, path='', template="hmp2-summary.html"):
             # dataset summary reports
             segs = file.split('/')[:-1]
             segs.append("summary")
-            report_files = walk("/seq/ibdmdb/" + "/".join(segs[2:]), ["summary.html"])
+            summary_files = walk("/seq/ibdmdb/" + "/".join(segs[2:]), ["summary.html"])
 
             if len(summary_files) == 1:
-                report_files = convert_to_web(summary_files, "public")
-                reports.append(report_files[0])
+                summary_files = convert_to_web(summary_files, "public/")
+                summaries.append(summary_files[0].replace('summary.html', ''))
             else:
-                reports.append(None)            
-
-            # Anytime our metadata is updated we should have a timestamp file
-            # created we can use to update the last time our metadata was 
-            # updated.
-            if file.split('/')[4] == 'Metadata':
-                timestamp_files = walk("/seq/ibdmdb/public", [".timestamp"])
-
-                if len(timestamp_files) == 1:
-                    metadata_last_updated = os.path.splitext(os.path.basename(timestamp_files[0]))[0]
+                summaries.append(None)
 
         return render_to_response(
             template,
             {
                 'path': path,
-                'size': len(htmlfiles),
-                'range': range(len(htmlfiles)),
+                'size': len(complete),
+                'range': range(len(complete)),
                 'types': types,
                 'study': study,
                 'week': week,
                 'detail': detail,
                 'products': products,
-                'summary': reports,
+                'summary': summaries,
                 'reports': types,
                 'charts': charts,
                 'rawfiles': raw,
-                'htmlfiles': htmlfiles,
+                'htmlfiles': complete,
                 'metafiles': metafiles,
                 'metadata_last_updated': metadata_last_updated
             },
