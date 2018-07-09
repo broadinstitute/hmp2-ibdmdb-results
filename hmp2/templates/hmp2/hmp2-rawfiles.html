@@ -1,4 +1,8 @@
-{% extends "homepage-base.html" %} {% load myfilters %} {% load staticfiles %} {% block extra_js %}
+{% extends "homepage-base.html" %} 
+{% block meta_title %}
+  {{ block.super }} {{type}} Raw Files
+{% endblock %}
+{% load myfilters %} {% load staticfiles %} {% block extra_js %}
 <script>
   $(function () {
     var ids = []

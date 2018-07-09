@@ -1,4 +1,8 @@
-{% extends "homepage-base.html" %} {% load hmp2jsonfilter %} {% load myfilters %} {% load staticfiles %} {% block extra_js %}
+{% extends "homepage-base.html" %} 
+{% block meta_title %}
+  {{ block.super }} {{type}} Products
+{% endblock %}
+{% load hmp2jsonfilter %} {% load myfilters %} {% load staticfiles %} {% block extra_js %}
 <script>
   $(function () {
     var ids = []

@@ -1,5 +1,8 @@
 {% extends "homepage-base.html" %}
-{% load myfilters %}
+{% block metatitle %}
+  {{ block.super }} Results
+{% endblock %}
+{% load hmp2_common_filters %}
 {% block main %}
 <div class="row">
   <div class="page-header">

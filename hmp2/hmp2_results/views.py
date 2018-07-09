@@ -215,6 +215,7 @@ def summary(request, path='', template="hmp2-summary.html"):
         charts = []
         raw = []
         metafiles = []
+        summaries = []
         complete = []
         reports = []
         metadata_last_updated = ""
@@ -261,7 +262,7 @@ def summary(request, path='', template="hmp2-summary.html"):
                 raw.append(None)
             elif file.split('/')[4] == "HTX":
                 raw.append(None)
-            elif files.split('/')[4] == "Serology":
+            elif file.split('/')[4] == "Serology":
                 raw.append(None)                
             else:
                 raw.append('/'.join(segs))
@@ -488,6 +489,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
             logfiles[file.replace('_clean.log', '.fastq.bz2')] = _products_xlate(file)
             logfiles[file.replace('_clean.log', '.fastq.gz')] = _products_xlate(file)
             logfiles[file.replace('.log', '.fastq.gz')] = _products_xlate(file)
+            logfiles[file.replace('.log', '.tar')] = _products_xlate(file)
 
         for ftype in ('.fa', '.fastq', 'RawFileInventory.csv', '.xlsx', '.pdf', '.raw', '.raw.gz', '.fastq.bz2', '.fastq.gz', '.tar', '.bam'):
             for file in walk(rawpath, [ftype]):
@@ -514,7 +516,7 @@ def rawfiles(request, path='', template="hmp2-rawfiles.html"):
                 # with products I'm going to make an assumption that if the path element prior to our file 
                 # is not a numeric (i.e. the week + year combo) it is a categorization we want to dump
                 # these files under to be tab'd out.
-                file_sub_folder = raw_path.split(os.sep)[-1]
+                file_sub_folder = rawpath.split(os.sep)[-1]
                 category = file_sub_folder if not file_sub_folder.isdigit() else "Default"
                 slug = category.strip().lower().replace('-', '_') if category != "Default" else "Default"
                 categories[category] = slug
