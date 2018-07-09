@@ -86,6 +86,11 @@
       For contact information regarding the results and the workflow process, please search
       <a href=https://ibdmdb.org/enrollment> here.</a>
     </p>
+    {% with template_name='pages/dataset_documentation/'|add:data_type|add:"_products.html" %}
+      {% if ""|add:template_name|template_exists %}
+          {% include ""|add:template_name %}
+      {% endif %}
+    {% endwith %}
   </div>
 </div>
 

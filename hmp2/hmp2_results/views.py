@@ -449,6 +449,7 @@ def products(request, path='', template="hmp2-products.html"):
                                'product_info': product_info,
                                'productpath': productpath,
                                'productfiles': webproducts,
+                               'data_type': type.lower(),
                                'filetypes': filetypes,
                                'selected': selected},
                               context_instance=RequestContext(request))

@@ -1,9 +1,11 @@
 #!/bin/sh
 
+DJANGODIR=="$( cd "$( dirname "$0" )/../" && pwd )"  
+
 ext=".new"
-data_cache_file='/local/ibdmdb/mezzanine/hmp2/data_cache_fs.txt'
-processing_cache_file='/local/ibdmdb/mezzanine/hmp2/processing_cache_fs.txt'
-public_cache_file='/local/ibdmdb/mezzanine/hmp2/public_cache_fs.txt'
+data_cache_file="${DJANGODIR}/hmp2/data_cache_fs.txt"
+processing_cache_file="${DJANGODIR}/hmp2/processing_cache_fs.txt"
+public_cache_file="${DJANGODIR}/hmp2/public_cache_fs.txt"
 
 data_cache_dir='/seq/ibdmdb/data_deposition'
 processing_cache_dir='/seq/ibdmdb/processing'
