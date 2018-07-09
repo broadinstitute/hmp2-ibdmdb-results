@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DJANGODIR=="$( cd "$( dirname "$0" )/../" && pwd )"  
+DJANGODIR="$( cd "$( dirname "$0" )/../" && pwd )"  
 
 ext=".new"
 data_cache_file="${DJANGODIR}/hmp2/data_cache_fs.txt"
