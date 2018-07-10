@@ -2,7 +2,9 @@
 {% block meta_title %}
   {{ block.super }} {{type}} Raw Files
 {% endblock %}
-{% load myfilters %} {% load staticfiles %} {% block extra_js %}
+{% load myfilters %} {% load staticfiles %} 
+{% block extra_js %}
+<script src="{% static "js/ibdmdb_results.js" %}"></script>
 <script>
   $(function () {
     var ids = []
@@ -41,7 +43,7 @@
         , val = ""
         , dec = 1;
       if (this.checked) {
-        var logels = this.parentElement.parentElement.children[2].children;
+        var logels = this.parentElement.parentElement.children[1].children;
         if (logels)
           $('<input type="hidden" name="fs">').attr("value", logels[0].text)
             .insertAfter($(this));
@@ -54,21 +56,16 @@
     });
 
   });
-</script> {% endblock extra_js %}
-{% block extra_head %}
-<script src="{% static "js/hmp2_results.js" %}"></script>
-
-<link rel="stylesheet" href="{% static "css/ibdmdb-downloads.css" %}">
-{% endblock %}
+</script> 
+{% endblock extra_js %}
+{% block extra_head %}{% endblock %}
 {% block main %}
 <div class="row">
   <div class="page-header">
     <h1>Raw Files</h1>
     <p>This page shows the raw data used for a single run of the HMP2 workflow. Each run is comprised of a set of data that
       has been uploaded to the HMP2 servers. Once there, it is filtered for quality and error checked for completeness. The
-      raw data displayed below has been filtered. After the QC phase, the data is run on a specific Anadama pipeline. For
-      contact information regarding the results and the workflow process, please search
-      <a href=https://ibdmdb.org/enrollment> here.</a>
+      raw data displayed below has been filtered. After the QC phase, the data is run on a specific AnADAMA2 pipeline. 
     </p>
     {% with template_name='pages/dataset_documentation/'|add:data_type|add:"_raw.html" %}
       {% if ""|add:template_name|template_exists %}

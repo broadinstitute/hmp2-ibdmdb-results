@@ -2,12 +2,13 @@
 {% block meta_title %}
   {{ block.super }} {{type}} Products
 {% endblock %}
-{% load hmp2jsonfilter %} {% load myfilters %} {% load staticfiles %} {% block extra_js %}
+{% load hmp2jsonfilter %} {% load myfilters %} {% load staticfiles %}
+{% block extra_js %}
+<script src="{% static "js/ibdmdb_results.js" %}"></script>
 <script>
   $(function () {
     var ids = []
-      , filetypes = {{ filetypes| hmp2json | safe }
-  }
+    , filetypes = {{ filetypes| hmp2json | safe }}
     , selected = "{{selected|safe}}"
     , rows = $("tbody > tr")
     , qbox = $("#query_box")
@@ -66,7 +67,7 @@
       , val = ""
       , dec = 1;
     if (this.checked) {
-      var logels = this.parentElement.parentElement.children[2].children;
+      var logels = this.parentElement.parentElement.children[1].children;
       if (logels)
         $('<input type="hidden" name="fs">').attr("value", logels[0].text)
           .insertAfter($(this));
@@ -79,7 +80,10 @@
   });
 
 });
-</script> {% endblock extra_js %} {% block main %}
+</script> 
+
+{% endblock extra_js %} 
+{% block main %}
 <div class="row">
   <div class="page-header">
     <h1>Run Products</h1>
