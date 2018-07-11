@@ -11,6 +11,7 @@ import logging
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.conf import settings
 
 
 cache_dict = {}
@@ -147,6 +148,8 @@ def dataset_summary(request, project, data_type, week):
     file_cache_dict = map(str.strip, open(public_cache_file).readlines())
     summary_groups = itertools.groupby(file_cache_dict, lambda x: 'summary' in x and project in x and data_type in x and week in x)
 
+    anadama2_static_base = settings.STATIC_ROOT
+
     logger.info("Summary groups:", summary_groups)
 
     # If this is a list > 1 than something went wrong here
@@ -164,7 +167,16 @@ def dataset_summary(request, project, data_type, week):
         #
         # The images and json file should go to our AnADAMA2 static directory
         # to be served with our static content.
+        #
+        # Quick note here over the adding of the "/tunnel/public/dataset_summary"
+        # If we are operating in our current production setting we are proxy'ing 
+        # requests between a protected server and an unprotected server so we 
+        # need to add these all for the requests to pass through to the internal 
+        # server. Messy but needed for the time being.
         anadama2_static_dir = os.path.join(anadama2_static_base,
+                                           'tunnel',
+                                           'public',
+                                           'dataset_summary',
                                            project,
                                            data_type, week)
 
@@ -184,7 +196,8 @@ def dataset_summary(request, project, data_type, week):
             open(complete_file, 'a').close()
 
         # Need to add a check in here to make sure that our summary.html file does exist.
-        summary_url = os.path.join('/dataset_summary', project, data_type, week, 'summary', 'summary.html')
+        summary_url = os.path.join('tunnel', 'public', 'dataset_summary', 
+                                   project, data_type, week, 'summary', 'summary.html')
 
         return HttpResponseRedirect(summary_url)
     return HttpResponse(status=500)

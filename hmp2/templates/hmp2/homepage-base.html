@@ -36,7 +36,7 @@
   {% block extra_head %}{% endblock %}
 
 	{% compress js %}
-	<script src="{% static " mezzanine/js/ "|add:settings.JQUERY_FILENAME %}"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="{% static " js/bootstrap.js " %}"></script> {% block extra_js %}{% endblock %} {% endcompress %}
 	<!--[if lt IE 9]>
 	<script src="{% static "js/html5shiv.js" %}"></script>
