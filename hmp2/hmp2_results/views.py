@@ -449,7 +449,7 @@ def products(request, path='', template="hmp2-products.html"):
                 selected = s
                 break
 
-        productpath= "/tunnel/cb/document/Public/" + '/'.join(path_list(path)[2:-1])
+        productpath= "/tunnel/products/" + '/'.join(path_list(path)[2:-1])
 
         return render_to_response(template,
                               {'path': path,
